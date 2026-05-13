@@ -7,7 +7,7 @@ import { User } from "../../models/User";
 import { ok } from "../../utils/envelope";
 
 export const authRouter = Router();
-
+// to sync the user info from clerk to our db
 authRouter.post("/sync", requireAuth,
     
     asyncHandler(async(req, res) =>{
@@ -72,3 +72,32 @@ authRouter.post("/sync", requireAuth,
         )
     }),
 );
+
+// to get current user info
+authRouter.get("/me",requireAuth, asyncHandler(
+    async (req,res) => {
+       const {userId} = getAuth(req)
+
+       if(!userId) {
+        throw new AppError(401, "User is not logged in. Means unauth user!");
+       }
+
+       const dbUser = await User.findOne({clerkUserId : userId});
+
+       if(!dbUser) {
+        throw new AppError(404, "User not found in DB");
+       }
+
+       res.status(200).json(
+        ok({
+            user : {
+                id : dbUser._id,
+                clerkUserId : dbUser.clerkUserId,
+                email : dbUser.email,
+                name : dbUser.name,
+                role : dbUser.role,
+            },
+        }),
+       );
+    },
+));
